@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -108,11 +108,14 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
     if (!qrRef.current) return;
     setIsSaving(true);
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
+      let perm = await MediaLibrary.getPermissionsAsync(true);
+      if (perm.status !== 'granted') {
+        perm = await MediaLibrary.requestPermissionsAsync(true);
+      }
+      if (perm.status !== 'granted') {
         Alert.alert(
-          'Permission Denied',
-          'Gallery permission is needed to save the generated QR code.'
+          'Permission Required',
+          'Storage permission is required to save the QR code to your gallery.'
         );
         setIsSaving(false);
         return;
@@ -121,12 +124,26 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
       const uri = await captureRef(qrRef, {
         format: 'png',
         quality: 1.0,
+        result: 'tmpfile',
       });
 
-      await MediaLibrary.saveToLibraryAsync(uri);
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      try {
+        const album = await MediaLibrary.getAlbumAsync('QR Scanner');
+        if (album) {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        } else {
+          await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
+        }
+      } catch (albumErr) {
+        console.log('Album grouping optional:', albumErr);
+      }
+
       showToast('Saved to photos gallery!');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save QR code image.');
+      Alert.alert('Saved!', 'QR Code has been saved to your photo gallery.');
+    } catch (error: any) {
+      console.error('Save to gallery error:', error);
+      Alert.alert('Save Failed', error?.message || 'Failed to save QR code image.');
     } finally {
       setIsSaving(false);
     }

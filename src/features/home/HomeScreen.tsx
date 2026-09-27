@@ -47,7 +47,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Primary Action Buttons */}
         <View style={styles.actionsContainer}>
           {/* Scan Button */}
@@ -105,12 +109,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.emptyHistoryText}>No scans or generated codes yet</Text>
           </View>
         )}
-
-        {/* Bottom Banner Ad */}
-        <View style={styles.bannerContainer}>
-          <AppBannerAd />
-        </View>
       </ScrollView>
+
+      {/* Bottom Banner Ad pinned like HistoryScreen */}
+      <View style={styles.bannerWrapper}>
+        <AppBannerAd />
+      </View>
     </View>
   );
 };
@@ -149,9 +153,12 @@ const styles = StyleSheet.create({
   iconText: {
     fontSize: 18,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: theme.spacing.xl,
   },
   actionsContainer: {
     gap: theme.spacing.md,
@@ -226,16 +233,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
   },
-  bannerContainer: {
-    backgroundColor: theme.colors.surface,
-    height: 50,
-    borderRadius: theme.borderRadius.sm,
+  bannerWrapper: {
+    paddingBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: theme.spacing.md,
-  },
-  bannerText: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
   },
 });
