@@ -73,7 +73,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleOpenPrivacyPolicy = async () => {
-    const url = 'https://policies.google.com/privacy';
+    const url = 'https://sites.google.com/view/stormlogix-privacy-policy/home';
     const supported = await Linking.canOpenURL(url);
     if (supported) {
       await Linking.openURL(url);
