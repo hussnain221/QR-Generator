@@ -6,7 +6,6 @@ import { RootStackParamList } from '../../navigation/RootNavigator';
 import { HistoryRepository, HistoryItem } from '../../core/storage/historyRepository';
 import { HistoryTile } from '../../shared/components/HistoryTile';
 import { ResultParser } from '../../core/scan/resultParser';
-import { AppBannerAd } from '../../shared/components/AppBannerAd';
 import { AppIcon } from '../../shared/components/AppIcon';
 import { theme, useTheme } from '../../theme/theme';
 
@@ -37,7 +36,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>QR & Barcode</Text>
+          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>QR Scanner & Generator</Text>
           <Text style={[styles.appSubtitle, { color: colors.textSecondary }]}>Fast, secure, offline scanning</Text>
         </View>
         <TouchableOpacity
@@ -118,11 +117,6 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
-
-      {/* Bottom Banner Ad pinned like HistoryScreen */}
-      <View style={styles.bannerWrapper}>
-        <AppBannerAd />
-      </View>
     </View>
   );
 };
@@ -246,10 +240,5 @@ const styles = StyleSheet.create({
   emptyHistoryText: {
     color: theme.colors.textSecondary,
     fontSize: 14,
-  },
-  bannerWrapper: {
-    paddingBottom: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
