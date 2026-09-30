@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { QrResultType } from '../../core/scan/resultParser';
+import { AppIcon, IconName } from './AppIcon';
 
 interface Props {
   type: QrResultType;
@@ -8,27 +9,27 @@ interface Props {
 }
 
 export const ResultTypeIcon: React.FC<Props> = ({ type, size = 44 }) => {
-  const getDetails = (): { emoji: string; bg: string } => {
+  const getDetails = (): { icon: IconName; bg: string } => {
     switch (type) {
       case 'url':
-        return { emoji: '🌐', bg: '#2563EB' };
+        return { icon: 'globe', bg: '#2563EB' };
       case 'wifi':
-        return { emoji: '📶', bg: '#059669' };
+        return { icon: 'wifi', bg: '#059669' };
       case 'vcard':
-        return { emoji: '👤', bg: '#7C3AED' };
+        return { icon: 'user', bg: '#7C3AED' };
       case 'upi':
-        return { emoji: '💳', bg: '#D97706' };
+        return { icon: 'credit-card', bg: '#D97706' };
       case 'plainText':
       default:
-        return { emoji: '📄', bg: '#475569' };
+        return { icon: 'file-text', bg: '#475569' };
     }
   };
 
-  const { emoji, bg } = getDetails();
+  const { icon, bg } = getDetails();
 
   return (
     <View style={[styles.container, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
-      <Text style={{ fontSize: size * 0.48 }}>{emoji}</Text>
+      <AppIcon name={icon} size={size * 0.52} color="#FFFFFF" strokeWidth={2} />
     </View>
   );
 };

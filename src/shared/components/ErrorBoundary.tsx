@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppIcon } from './AppIcon';
 import { theme } from '../../theme/theme';
 
 interface Props {
@@ -34,7 +35,9 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <View style={styles.card}>
-            <Text style={styles.emoji}>⚠️</Text>
+            <View style={styles.iconWrapper}>
+              <AppIcon name="warning" size={48} color={theme.colors.warning} />
+            </View>
             <Text style={styles.title}>Something went wrong</Text>
             <Text style={styles.subtitle}>
               An unexpected error occurred. You can safely return to the home screen.
@@ -74,8 +77,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
   },
-  emoji: {
-    fontSize: 48,
+  iconWrapper: {
     marginBottom: theme.spacing.md,
   },
   title: {

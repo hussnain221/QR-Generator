@@ -7,38 +7,38 @@ import {
   ScrollView,
   Switch,
   Linking,
-  Alert,
   Share,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { PrefsRepository, ThemeMode } from '../../core/storage/prefsRepository';
 import { HistoryRepository } from '../../core/storage/historyRepository';
-import { theme } from '../../theme/theme';
+import { AppIcon, IconName } from '../../shared/components/AppIcon';
+import { showDialog } from '../../shared/components/AppDialog';
+import { theme, useTheme } from '../../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: IconName }[] = [
+  { mode: 'dark', label: 'Dark', icon: 'moon' },
+  { mode: 'light', label: 'Light', icon: 'sun' },
+  { mode: 'system', label: 'System', icon: 'smartphone' },
+];
+
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
+  const { mode: themeMode, setThemeMode, colors } = useTheme();
   const [vibrate, setVibrate] = useState<boolean>(true);
   const [beep, setBeep] = useState<boolean>(false);
 
   useEffect(() => {
     const loadSettings = async () => {
-      const mode = await PrefsRepository.getInstance().getThemeMode();
       const vib = await PrefsRepository.getInstance().getVibrateOnScan();
       const bp = await PrefsRepository.getInstance().getBeepOnScan();
-      setThemeModeState(mode);
       setVibrate(vib);
       setBeep(bp);
     };
     loadSettings();
   }, []);
-
-  const handleThemeChange = async (mode: ThemeMode) => {
-    setThemeModeState(mode);
-    await PrefsRepository.getInstance().setThemeMode(mode);
-  };
 
   const handleVibrateToggle = async (val: boolean) => {
     setVibrate(val);
@@ -51,21 +51,25 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleClearHistory = () => {
-    Alert.alert(
-      'Clear All History',
-      'Are you sure you want to permanently delete all scan and generation history?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            await HistoryRepository.getInstance().clear();
-            Alert.alert('History Cleared', 'All records have been removed.');
-          },
-        },
-      ]
-    );
+    showDialog({
+      title: 'Clear All History',
+      message: 'Are you sure you want to permanently delete all scan and generation history?',
+      type: 'danger',
+      icon: 'trash',
+      cancelText: 'Cancel',
+      confirmText: 'Clear All',
+      isDestructive: true,
+      onConfirm: async () => {
+        await HistoryRepository.getInstance().clear();
+        showDialog({
+          title: 'History Cleared',
+          message: 'All records have been permanently removed.',
+          type: 'success',
+          icon: 'check',
+          confirmText: 'Done',
+        });
+      },
+    });
   };
 
   const handleOpenPrivacyPolicy = async () => {
@@ -77,8 +81,8 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleRateApp = async () => {
-    const playStoreUrl = 'market://details?id=com.example.qr_scanner_app';
-    const webUrl = 'https://play.google.com/store/apps/details?id=com.example.qr_scanner_app';
+    const playStoreUrl = 'market://details?id=com.stormlogix.qrscanner';
+    const webUrl = 'https://play.google.com/store/apps/details?id=com.stormlogix.qrscanner';
     try {
       const supported = await Linking.canOpenURL(playStoreUrl);
       if (supported) {
@@ -102,46 +106,51 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.iconText}>←</Text>
+          <AppIcon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
         <View style={styles.iconButtonPlaceholder} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* SECTION 1: APPEARANCE */}
-        <Text style={styles.sectionHeader}>Appearance</Text>
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Theme</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Appearance</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>Theme Mode</Text>
           <View style={styles.themeRow}>
-            {(['dark', 'light', 'system'] as const).map((mode) => {
-              const isSelected = themeMode === mode;
-              const labels: Record<ThemeMode, string> = {
-                dark: '🌙 Dark',
-                light: '☀️ Light',
-                system: '📱 System',
-              };
+            {THEME_OPTIONS.map((item) => {
+              const isSelected = themeMode === item.mode;
               return (
                 <TouchableOpacity
-                  key={mode}
-                  style={[styles.themeChip, isSelected && styles.themeChipSelected]}
-                  onPress={() => handleThemeChange(mode)}
+                  key={item.mode}
+                  style={[
+                    styles.themeChip,
+                    {
+                      backgroundColor: isSelected ? colors.primary : colors.surfaceHover,
+                    },
+                  ]}
+                  onPress={() => setThemeMode(item.mode)}
                 >
+                  <AppIcon
+                    name={item.icon}
+                    size={16}
+                    color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                  />
                   <Text
                     style={[
                       styles.themeChipText,
-                      isSelected && styles.themeChipTextSelected,
+                      { color: isSelected ? '#FFFFFF' : colors.textSecondary },
                     ]}
                   >
-                    {labels[mode]}
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -150,72 +159,98 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {/* SECTION 2: SCANNER BEHAVIOR */}
-        <Text style={styles.sectionHeader}>Scanner Feedback</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Scanner Feedback</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <View style={styles.settingRow}>
             <View style={styles.settingTextContainer}>
-              <Text style={styles.settingTitle}>Vibrate on Scan</Text>
-              <Text style={styles.settingSubtitle}>Provide haptic feedback on successful detection</Text>
+              <Text style={[styles.settingTitle, { color: colors.textPrimary }]}>Vibrate on Scan</Text>
+              <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
+                Provide haptic feedback on successful detection
+              </Text>
             </View>
             <Switch
               value={vibrate}
               onValueChange={handleVibrateToggle}
-              trackColor={{ false: theme.colors.surfaceHover, true: theme.colors.primary }}
+              trackColor={{ false: colors.surfaceHover, true: colors.primary }}
             />
           </View>
 
-          <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: theme.colors.border, marginTop: 12, paddingTop: 12 }]}>
+          <View
+            style={[
+              styles.settingRow,
+              {
+                borderTopWidth: 1,
+                borderTopColor: colors.border,
+                marginTop: 12,
+                paddingTop: 12,
+              },
+            ]}
+          >
             <View style={styles.settingTextContainer}>
-              <Text style={styles.settingTitle}>Beep on Scan</Text>
-              <Text style={styles.settingSubtitle}>Play a short tone when code is captured</Text>
+              <Text style={[styles.settingTitle, { color: colors.textPrimary }]}>Beep on Scan</Text>
+              <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
+                Play a short tone when code is captured
+              </Text>
             </View>
             <Switch
               value={beep}
               onValueChange={handleBeepToggle}
-              trackColor={{ false: theme.colors.surfaceHover, true: theme.colors.primary }}
+              trackColor={{ false: colors.surfaceHover, true: colors.primary }}
             />
           </View>
         </View>
 
         {/* SECTION 3: STORAGE */}
-        <Text style={styles.sectionHeader}>Data Management</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Data Management</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <TouchableOpacity style={styles.dangerRow} onPress={handleClearHistory}>
-            <Text style={styles.dangerRowText}>🗑️ Clear All Saved History</Text>
-            <Text style={styles.chevron}>›</Text>
+            <View style={styles.rowLeft}>
+              <AppIcon name="trash" size={17} color={colors.danger} />
+              <Text style={[styles.dangerRowText, { color: colors.danger }]}>Clear All Saved History</Text>
+            </View>
+            <AppIcon name="chevron-right" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* SECTION 4: ABOUT & LEGAL */}
-        <Text style={styles.sectionHeader}>About & Legal</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>About & Legal</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <TouchableOpacity style={styles.menuRow} onPress={handleOpenPrivacyPolicy}>
-            <Text style={styles.menuRowText}>🔒 Privacy Policy</Text>
-            <Text style={styles.chevron}>›</Text>
+            <View style={styles.rowLeft}>
+              <AppIcon name="shield" size={18} color={colors.textPrimary} />
+              <Text style={[styles.menuRowText, { color: colors.textPrimary }]}>Privacy Policy</Text>
+            </View>
+            <AppIcon name="chevron-right" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuRow, { borderTopWidth: 1, borderTopColor: theme.colors.border }]}
+            style={[styles.menuRow, { borderTopWidth: 1, borderTopColor: colors.border }]}
             onPress={handleRateApp}
           >
-            <Text style={styles.menuRowText}>⭐ Rate on Google Play</Text>
-            <Text style={styles.chevron}>›</Text>
+            <View style={styles.rowLeft}>
+              <AppIcon name="star" size={18} color={colors.textPrimary} />
+              <Text style={[styles.menuRowText, { color: colors.textPrimary }]}>Rate on Google Play</Text>
+            </View>
+            <AppIcon name="chevron-right" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuRow, { borderTopWidth: 1, borderTopColor: theme.colors.border }]}
+            style={[styles.menuRow, { borderTopWidth: 1, borderTopColor: colors.border }]}
             onPress={handleShareApp}
           >
-            <Text style={styles.menuRowText}>📤 Share with Friends</Text>
-            <Text style={styles.chevron}>›</Text>
+            <View style={styles.rowLeft}>
+              <AppIcon name="share" size={18} color={colors.textPrimary} />
+              <Text style={[styles.menuRowText, { color: colors.textPrimary }]}>Share with Friends</Text>
+            </View>
+            <AppIcon name="chevron-right" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* APP INFO FOOTER */}
         <View style={styles.aboutFooter}>
-          <Text style={styles.aboutAppName}>QR & Barcode Scanner</Text>
-          <Text style={styles.aboutVersion}>Version 1.0.0 (Build 1)</Text>
-          <Text style={styles.aboutTagline}>
+          <Text style={[styles.aboutAppName, { color: colors.textPrimary }]}>QR & Barcode Scanner</Text>
+          <Text style={[styles.aboutVersion, { color: colors.textSecondary }]}>Version 1.0.0 (Build 1)</Text>
+          <Text style={[styles.aboutTagline, { color: colors.textSecondary }]}>
             100% on-device processing. No servers, no tracking, complete privacy.
           </Text>
         </View>
@@ -277,8 +312,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   cardLabel: {
-    color: theme.colors.textSecondary,
     fontSize: 13,
+    fontWeight: '600',
     marginBottom: 10,
   },
   themeRow: {
@@ -287,21 +322,16 @@ const styles = StyleSheet.create({
   },
   themeChip: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     paddingVertical: 10,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.surfaceHover,
-    alignItems: 'center',
-  },
-  themeChipSelected: {
-    backgroundColor: theme.colors.primary,
   },
   themeChipText: {
-    color: theme.colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
-  },
-  themeChipTextSelected: {
-    color: '#FFF',
   },
   settingRow: {
     flexDirection: 'row',
@@ -321,6 +351,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 12,
     marginTop: 2,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   dangerRow: {
     flexDirection: 'row',

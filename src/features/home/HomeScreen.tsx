@@ -7,11 +7,13 @@ import { HistoryRepository, HistoryItem } from '../../core/storage/historyReposi
 import { HistoryTile } from '../../shared/components/HistoryTile';
 import { ResultParser } from '../../core/scan/resultParser';
 import { AppBannerAd } from '../../shared/components/AppBannerAd';
-import { theme } from '../../theme/theme';
+import { AppIcon } from '../../shared/components/AppIcon';
+import { theme, useTheme } from '../../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const { colors, isDark } = useTheme();
   const [recentItems, setRecentItems] = useState<HistoryItem[]>([]);
 
   useFocusEffect(
@@ -29,21 +31,21 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.appTitle}>QR & Barcode</Text>
-          <Text style={styles.appSubtitle}>Fast, secure, offline scanning</Text>
+          <Text style={[styles.appTitle, { color: colors.textPrimary }]}>QR & Barcode</Text>
+          <Text style={[styles.appSubtitle, { color: colors.textSecondary }]}>Fast, secure, offline scanning</Text>
         </View>
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.navigate('Settings')}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.iconText}>⚙️</Text>
+          <AppIcon name="settings" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -61,7 +63,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('Scanner')}
           >
             <View style={styles.cardIconBadge}>
-              <Text style={styles.cardEmoji}>📷</Text>
+              <AppIcon name="camera" size={26} color="#FFFFFF" />
             </View>
             <View>
               <Text style={styles.cardTitle}>Scan Code</Text>
@@ -76,7 +78,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('Generator')}
           >
             <View style={styles.cardIconBadge}>
-              <Text style={styles.cardEmoji}>✨</Text>
+              <AppIcon name="sparkles" size={26} color="#FFFFFF" />
             </View>
             <View>
               <Text style={styles.cardTitle}>Generate QR</Text>
@@ -87,9 +89,13 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Recent History Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('History')}>
-            <Text style={styles.seeAllText}>See All →</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Activity</Text>
+          <TouchableOpacity
+            style={styles.seeAllButton}
+            onPress={() => navigation.navigate('History')}
+          >
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
+            <AppIcon name="chevron-right" size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -104,9 +110,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             ))}
           </View>
         ) : (
-          <View style={styles.emptyHistoryCard}>
-            <Text style={styles.emptyHistoryEmoji}>🕒</Text>
-            <Text style={styles.emptyHistoryText}>No scans or generated codes yet</Text>
+          <View style={[styles.emptyHistoryCard, { backgroundColor: colors.surface }]}>
+            <View style={{ marginBottom: theme.spacing.sm }}>
+              <AppIcon name="clock" size={32} color={colors.textSecondary} />
+            </View>
+            <Text style={[styles.emptyHistoryText, { color: colors.textSecondary }]}>No scans or generated codes yet</Text>
           </View>
         )}
       </ScrollView>
@@ -118,6 +126,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -208,6 +217,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   seeAllText: {
     fontSize: 14,

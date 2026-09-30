@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   FlatList,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,12 +15,15 @@ import { HistoryRepository, HistoryItem } from '../../core/storage/historyReposi
 import { HistoryTile } from '../../shared/components/HistoryTile';
 import { ResultParser } from '../../core/scan/resultParser';
 import { AppBannerAd } from '../../shared/components/AppBannerAd';
-import { theme } from '../../theme/theme';
+import { AppIcon } from '../../shared/components/AppIcon';
+import { showDialog } from '../../shared/components/AppDialog';
+import { theme, useTheme } from '../../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
 type FilterTab = 'all' | 'scan' | 'generate';
 
 export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
+  const { colors, isDark } = useTheme();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
@@ -62,28 +64,39 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
       await HistoryRepository.getInstance().delete(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
     } catch {
-      Alert.alert('Error', 'Failed to delete history item.');
+      showDialog({
+        title: 'Delete Failed',
+        message: 'Failed to delete history item.',
+        type: 'danger',
+        icon: 'warning',
+        confirmText: 'OK',
+      });
     }
   };
 
   const handleClearAll = () => {
     if (items.length === 0) return;
 
-    Alert.alert(
-      'Clear All History',
-      'Are you sure you want to delete all scan and generation history? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            await HistoryRepository.getInstance().clear();
-            setItems([]);
-          },
-        },
-      ]
-    );
+    showDialog({
+      title: 'Clear All History',
+      message: 'Are you sure you want to delete all scan and generation history? This action cannot be undone.',
+      type: 'danger',
+      icon: 'trash',
+      cancelText: 'Cancel',
+      confirmText: 'Clear All',
+      isDestructive: true,
+      onConfirm: async () => {
+        await HistoryRepository.getInstance().clear();
+        setItems([]);
+        showDialog({
+          title: 'History Cleared',
+          message: 'All records have been permanently removed.',
+          type: 'success',
+          icon: 'check',
+          confirmText: 'Done',
+        });
+      },
+    });
   };
 
   const handleSelectTile = (item: HistoryItem) => {
@@ -92,44 +105,59 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.iconText}>←</Text>
+          <AppIcon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>History</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>History</Text>
 
         <TouchableOpacity
-          style={[styles.iconButton, items.length === 0 && { opacity: 0.4 }]}
+          style={[
+            styles.iconButton,
+            { backgroundColor: colors.surface },
+            items.length === 0 && { opacity: 0.4 },
+          ]}
           onPress={handleClearAll}
           disabled={items.length === 0}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.iconText}>🗑️</Text>
+          <AppIcon
+            name="trash"
+            size={19}
+            color={items.length === 0 ? colors.textSecondary : colors.danger}
+          />
         </TouchableOpacity>
       </View>
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
+          style={[
+            styles.searchInput,
+            {
+              backgroundColor: colors.surface,
+              color: colors.textPrimary,
+              borderColor: colors.border,
+            },
+          ]}
           placeholder="Search history by content..."
-          placeholderTextColor={theme.colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity
-            style={styles.clearSearchButton}
+            style={[styles.clearSearchButton, { backgroundColor: colors.surfaceHover }]}
             onPress={() => setSearchQuery('')}
           >
-            <Text style={styles.clearSearchText}>✕</Text>
+            <AppIcon name="close" size={14} color={colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
         )}
       </View>
@@ -146,10 +174,20 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
           return (
             <TouchableOpacity
               key={filter}
-              style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: isSelected ? colors.primary : colors.surface,
+                },
+              ]}
               onPress={() => setActiveFilter(filter)}
             >
-              <Text style={[styles.filterChipText, isSelected && styles.filterChipTextSelected]}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: isSelected ? '#FFFFFF' : colors.textSecondary },
+                ]}
+              >
                 {labels[filter]}
               </Text>
             </TouchableOpacity>
@@ -160,7 +198,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
       {/* History List / Loading / Empty */}
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator color={theme.colors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       ) : (
         <FlatList
@@ -176,11 +214,13 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
           )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>📜</Text>
-              <Text style={styles.emptyTitle}>
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <AppIcon name="history" size={48} color={colors.textSecondary} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                 {searchQuery ? 'No matching results' : 'No history yet'}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 {searchQuery
                   ? 'Try searching with a different keyword.'
                   : 'Codes you scan or generate will be securely stored here.'}
@@ -197,6 +237,7 @@ export const HistoryScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

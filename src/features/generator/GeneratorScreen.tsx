@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Alert,
   Platform,
   Switch,
   ActivityIndicator,
@@ -22,19 +21,22 @@ import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useGeneratorStore, GeneratorTab } from './useGeneratorStore';
 import { HistoryRepository } from '../../core/storage/historyRepository';
 import { AdManager } from '../../core/ads/adManager';
-import { theme } from '../../theme/theme';
+import { AppIcon, IconName } from '../../shared/components/AppIcon';
+import { showDialog } from '../../shared/components/AppDialog';
+import { theme, useTheme } from '../../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Generator'>;
 
-const TABS: { id: GeneratorTab; label: string; icon: string }[] = [
-  { id: 'text', label: 'Text', icon: '📄' },
-  { id: 'url', label: 'URL', icon: '🌐' },
-  { id: 'wifi', label: 'Wi-Fi', icon: '📶' },
-  { id: 'vcard', label: 'Contact', icon: '👤' },
-  { id: 'upi', label: 'UPI', icon: '💳' },
+const TABS: { id: GeneratorTab; label: string; icon: IconName }[] = [
+  { id: 'text', label: 'Text', icon: 'file-text' },
+  { id: 'url', label: 'URL', icon: 'globe' },
+  { id: 'wifi', label: 'Wi-Fi', icon: 'wifi' },
+  { id: 'vcard', label: 'Contact', icon: 'user' },
+  { id: 'upi', label: 'UPI', icon: 'credit-card' },
 ];
 
 export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
+  const { colors, isDark } = useTheme();
   const qrRef = useRef<View>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
@@ -68,7 +70,13 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
   const handleGenerate = async () => {
     const result = generateCurrent();
     if (!result) {
-      Alert.alert('Required Fields Missing', 'Please fill in the required inputs before generating.');
+      showDialog({
+        title: 'Required Fields Missing',
+        message: 'Please fill in the required inputs before generating.',
+        type: 'warning',
+        icon: 'warning',
+        confirmText: 'Got It',
+      });
       return;
     }
 
@@ -94,13 +102,13 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
     if (isStyleUnlocked) return;
     const shown = await AdManager.getInstance().showRewarded(() => {
       setIsStyleUnlocked(true);
-      showToast('🎉 Custom colors unlocked for this session!');
+      showToast('Custom colors unlocked for this session!');
     });
 
     if (!shown) {
       // In dev or if ad not filled yet, grant reward
       setIsStyleUnlocked(true);
-      showToast('🎉 Custom colors unlocked!');
+      showToast('Custom colors unlocked!');
     }
   };
 
@@ -113,10 +121,13 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
         perm = await MediaLibrary.requestPermissionsAsync(true);
       }
       if (perm.status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Storage permission is required to save the QR code to your gallery.'
-        );
+        showDialog({
+          title: 'Permission Required',
+          message: 'Storage permission is required to save the QR code to your gallery.',
+          type: 'warning',
+          icon: 'warning',
+          confirmText: 'OK',
+        });
         setIsSaving(false);
         return;
       }
@@ -140,10 +151,22 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       showToast('Saved to photos gallery!');
-      Alert.alert('Saved!', 'QR Code has been saved to your photo gallery.');
+      showDialog({
+        title: 'Saved to Gallery',
+        message: 'QR Code has been saved to your photo gallery.',
+        type: 'success',
+        icon: 'check',
+        confirmText: 'Done',
+      });
     } catch (error: any) {
       console.error('Save to gallery error:', error);
-      Alert.alert('Save Failed', error?.message || 'Failed to save QR code image.');
+      showDialog({
+        title: 'Save Failed',
+        message: error?.message || 'Failed to save QR code image.',
+        type: 'danger',
+        icon: 'warning',
+        confirmText: 'OK',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -167,7 +190,13 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
         await Share.share({ message: generatedValue });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to share QR image.');
+      showDialog({
+        title: 'Share Failed',
+        message: 'Failed to share QR image.',
+        type: 'danger',
+        icon: 'warning',
+        confirmText: 'OK',
+      });
     }
   };
 
@@ -179,23 +208,24 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.iconText}>←</Text>
+          <AppIcon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create QR Code</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Create QR Code</Text>
         <View style={styles.iconButtonPlaceholder} />
       </View>
 
       {feedbackToast && (
         <View style={styles.toastContainer}>
-          <Text style={styles.toastText}>✓ {feedbackToast}</Text>
+          <AppIcon name="check" size={14} color="#FFF" />
+          <Text style={styles.toastText}>{feedbackToast}</Text>
         </View>
       )}
 
@@ -207,11 +237,23 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
             return (
               <TouchableOpacity
                 key={tab.id}
-                style={[styles.tabItem, isSelected && styles.tabItemSelected]}
+                style={[
+                  styles.tabItem,
+                  { backgroundColor: isSelected ? colors.primary : colors.surface },
+                ]}
                 onPress={() => setActiveTab(tab.id)}
               >
-                <Text style={styles.tabIcon}>{tab.icon}</Text>
-                <Text style={[styles.tabLabel, isSelected && styles.tabLabelSelected]}>
+                <AppIcon
+                  name={tab.icon}
+                  size={15}
+                  color={isSelected ? '#FFF' : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isSelected ? '#FFF' : colors.textSecondary },
+                  ]}
+                >
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -220,15 +262,24 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
         </ScrollView>
       </View>
 
+
       <ScrollView contentContainerStyle={styles.scrollBody} keyboardShouldPersistTaps="handled">
         {/* TAB 1: TEXT */}
         {activeTab === 'text' && (
-          <View style={styles.card}>
-            <Text style={styles.inputLabel}>Plain Text / Note</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Plain Text / Note</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[
+                styles.input,
+                styles.textArea,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="Enter message, note, or barcode value..."
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={textInput}
               onChangeText={setTextInput}
               multiline
@@ -239,12 +290,19 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* TAB 2: URL */}
         {activeTab === 'url' && (
-          <View style={styles.card}>
-            <Text style={styles.inputLabel}>Website URL</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Website URL</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="https://example.com"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={urlInput}
               onChangeText={setUrlInput}
               autoCapitalize="none"
@@ -255,41 +313,61 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* TAB 3: WI-FI */}
         {activeTab === 'wifi' && (
-          <View style={styles.card}>
-            <Text style={styles.inputLabel}>Network Name (SSID) *</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Network Name (SSID) *</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="MyHomeWiFi"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={wifiInput.ssid}
               onChangeText={(text) => setWifiInput({ ssid: text })}
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Password</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="Wi-Fi Password (leave empty for open)"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={wifiInput.password}
               onChangeText={(text) => setWifiInput({ password: text })}
               secureTextEntry
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Security Type</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Security Type</Text>
             <View style={styles.chipRow}>
               {(['WPA', 'WEP', 'nopass'] as const).map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.chip,
-                    wifiInput.authType === type && styles.chipSelected,
+                    {
+                      backgroundColor:
+                        wifiInput.authType === type ? colors.primary : colors.surfaceHover,
+                    },
                   ]}
                   onPress={() => setWifiInput({ authType: type })}
                 >
                   <Text
                     style={[
                       styles.chipText,
-                      wifiInput.authType === type && styles.chipTextSelected,
+                      {
+                        color:
+                          wifiInput.authType === type ? '#FFF' : colors.textSecondary,
+                      },
                     ]}
                   >
                     {type === 'nopass' ? 'Open' : type}
@@ -299,11 +377,11 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Hidden Network</Text>
+              <Text style={[styles.switchLabel, { color: colors.textPrimary }]}>Hidden Network</Text>
               <Switch
                 value={wifiInput.hidden}
                 onValueChange={(val) => setWifiInput({ hidden: val })}
-                trackColor={{ false: theme.colors.surfaceHover, true: theme.colors.primary }}
+                trackColor={{ false: colors.surfaceHover, true: colors.primary }}
               />
             </View>
           </View>
@@ -311,42 +389,70 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* TAB 4: VCARD */}
         {activeTab === 'vcard' && (
-          <View style={styles.card}>
-            <Text style={styles.inputLabel}>Full Name *</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Full Name *</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="Jane Doe"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={vcardInput.name}
               onChangeText={(text) => setVcardInput({ name: text })}
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Phone</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Phone</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="+1 234 567 8900"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={vcardInput.phone}
               onChangeText={(text) => setVcardInput({ phone: text })}
               keyboardType="phone-pad"
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Email</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="jane@example.com"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={vcardInput.email}
               onChangeText={(text) => setVcardInput({ email: text })}
               keyboardType="email-address"
               autoCapitalize="none"
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Organization</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Organization</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="Company / Team"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={vcardInput.organization}
               onChangeText={(text) => setVcardInput({ organization: text })}
             />
@@ -355,41 +461,69 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* TAB 5: UPI */}
         {activeTab === 'upi' && (
-          <View style={styles.card}>
-            <Text style={styles.inputLabel}>Payee UPI ID (VPA) *</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Payee UPI ID (VPA) *</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="merchant@upi"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={upiInput.pa}
               onChangeText={(text) => setUpiInput({ pa: text })}
               autoCapitalize="none"
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Payee Name</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Payee Name</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="Store or Person Name"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={upiInput.pn}
               onChangeText={(text) => setUpiInput({ pn: text })}
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Amount (Optional)</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Amount (Optional)</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="250.00"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={upiInput.am}
               onChangeText={(text) => setUpiInput({ am: text })}
               keyboardType="decimal-pad"
             />
 
-            <Text style={[styles.inputLabel, { marginTop: theme.spacing.md }]}>Transaction Note</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, marginTop: theme.spacing.md }]}>Transaction Note</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                },
+              ]}
               placeholder="Payment for goods"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={upiInput.tn}
               onChangeText={(text) => setUpiInput({ tn: text })}
             />
@@ -397,28 +531,36 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         {/* Action Button: Generate */}
-        <TouchableOpacity style={styles.generateButton} activeOpacity={0.85} onPress={handleGenerate}>
+        <TouchableOpacity
+          style={[styles.generateButton, { backgroundColor: colors.primary }]}
+          activeOpacity={0.85}
+          onPress={handleGenerate}
+        >
           <Text style={styles.generateButtonText}>Generate QR Code</Text>
         </TouchableOpacity>
 
         {/* Rendered QR Code Preview Container */}
         {generatedValue && (
-          <View style={styles.resultContainer}>
-            <Text style={styles.previewTitle}>Generated Code Preview</Text>
+          <View style={[styles.resultContainer, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.previewTitle, { color: colors.textPrimary }]}>Generated Code Preview</Text>
 
             {/* Rewarded Feature: Custom QR Colors */}
-            <View style={styles.stylingCard}>
+            <View style={[styles.stylingCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
               <View style={styles.stylingHeader}>
-                <Text style={styles.stylingTitle}>QR Styling</Text>
+                <Text style={[styles.stylingTitle, { color: colors.textPrimary }]}>QR Styling</Text>
                 {!isStyleUnlocked ? (
                   <TouchableOpacity
                     style={styles.unlockBadge}
                     onPress={handleUnlockStyling}
                   >
-                    <Text style={styles.unlockBadgeText}>🎁 Unlock Colors (Ad)</Text>
+                    <AppIcon name="palette" size={13} color="#000" />
+                    <Text style={styles.unlockBadgeText}>Unlock Colors (Ad)</Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.unlockedTag}>✓ Colors Unlocked</Text>
+                  <View style={styles.unlockedRow}>
+                    <AppIcon name="check" size={14} color={colors.accent} />
+                    <Text style={[styles.unlockedTag, { color: colors.accent }]}>Colors Unlocked</Text>
+                  </View>
                 )}
               </View>
 
@@ -443,7 +585,7 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
                   ))}
                 </View>
               ) : (
-                <Text style={styles.lockedTip}>
+                <Text style={[styles.lockedTip, { color: colors.textSecondary }]}>
                   Watch a short rewarded ad to customize the QR code color.
                 </Text>
               )}
@@ -463,23 +605,38 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
             {/* Actions for generated QR */}
             <View style={styles.resultActions}>
               <TouchableOpacity
-                style={styles.actionButtonPrimary}
+                style={[styles.actionButtonPrimary, { backgroundColor: colors.accent }]}
                 onPress={handleSaveToGallery}
                 disabled={isSaving}
               >
                 {isSaving ? (
                   <ActivityIndicator color="#FFF" size="small" />
                 ) : (
-                  <Text style={styles.actionButtonText}>💾 Save to Gallery</Text>
+                  <View style={styles.btnRow}>
+                    <AppIcon name="download" size={18} color="#FFF" />
+                    <Text style={styles.actionButtonText}>Save to Gallery</Text>
+                  </View>
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionButtonSecondary} onPress={handleShareImage}>
-                <Text style={styles.actionButtonSecondaryText}>↗️ Share Image</Text>
+              <TouchableOpacity
+                style={[styles.actionButtonSecondary, { backgroundColor: colors.surfaceHover }]}
+                onPress={handleShareImage}
+              >
+                <View style={styles.btnRow}>
+                  <AppIcon name="share" size={17} color={colors.textPrimary} />
+                  <Text style={[styles.actionButtonSecondaryText, { color: colors.textPrimary }]}>Share Image</Text>
+                </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionButtonSecondary} onPress={handleCopyValue}>
-                <Text style={styles.actionButtonSecondaryText}>📋 Copy Text</Text>
+              <TouchableOpacity
+                style={[styles.actionButtonSecondary, { backgroundColor: colors.surfaceHover }]}
+                onPress={handleCopyValue}
+              >
+                <View style={styles.btnRow}>
+                  <AppIcon name="copy" size={17} color={colors.textPrimary} />
+                  <Text style={[styles.actionButtonSecondaryText, { color: colors.textPrimary }]}>Copy Text</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -532,6 +689,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: theme.borderRadius.full,
     elevation: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   toastText: {
     color: '#FFF',
@@ -693,6 +853,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
   },
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   actionButtonSecondaryText: {
     color: theme.colors.textPrimary,
     fontSize: 14,
@@ -719,6 +885,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   unlockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: '#F59E0B',
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -728,6 +897,11 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 11,
     fontWeight: '700',
+  },
+  unlockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   unlockedTag: {
     color: theme.colors.accent,

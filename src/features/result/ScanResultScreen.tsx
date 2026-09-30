@@ -7,19 +7,21 @@ import {
   ScrollView,
   Share,
   Linking,
-  Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { HistoryRepository } from '../../core/storage/historyRepository';
 import { ResultTypeIcon } from '../../shared/components/ResultTypeIcon';
+import { AppIcon } from '../../shared/components/AppIcon';
+import { showDialog } from '../../shared/components/AppDialog';
 import { AdManager } from '../../core/ads/adManager';
-import { theme } from '../../theme/theme';
+import { theme, useTheme } from '../../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScanResult'>;
 
 export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
+  const { colors, isDark } = useTheme();
   const parsedResult = route.params?.parsedResult;
   const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
 
@@ -72,17 +74,29 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('Cannot Open Link', `No compatible app found to open: ${url}`);
+        showDialog({
+          title: 'Cannot Open Link',
+          message: `No compatible app found on your device to open: ${url}`,
+          type: 'warning',
+          icon: 'warning',
+          confirmText: 'OK',
+        });
       }
     } catch {
-      Alert.alert('Error', `Could not open: ${url}`);
+      showDialog({
+        title: 'Failed to Open',
+        message: `Could not open: ${url}`,
+        type: 'danger',
+        icon: 'warning',
+        confirmText: 'OK',
+      });
     }
   };
 
   if (!parsedResult) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.title}>No Scan Result</Text>
+      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>No Scan Result</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
           <Text style={styles.primaryButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -93,101 +107,103 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
   const { type, rawContent, metadata, displayTitle } = parsedResult;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <AppIcon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Scan Details</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Scan Details</Text>
 
         <TouchableOpacity
-          style={styles.shareButton}
+          style={[styles.shareButton, { backgroundColor: colors.surface }]}
           onPress={() => shareContent(rawContent)}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Text style={styles.shareIconText}>↗️</Text>
+          <AppIcon name="share" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
+
 
       {/* Copy confirmation toast */}
       {copiedMessage && (
         <View style={styles.toastContainer}>
-          <Text style={styles.toastText}>✓ {copiedMessage}</Text>
+          <AppIcon name="check" size={15} color="#FFFFFF" strokeWidth={2.5} />
+          <Text style={styles.toastText}>{copiedMessage}</Text>
         </View>
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Type Header Card */}
-        <View style={styles.overviewCard}>
+        <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
           <ResultTypeIcon type={type} size={54} />
           <View style={styles.overviewTextContainer}>
-            <Text style={styles.typeBadgeTitle}>{displayTitle}</Text>
-            <Text style={styles.typeBadgeSubtitle}>Auto-detected format</Text>
+            <Text style={[styles.typeBadgeTitle, { color: colors.textPrimary }]}>{displayTitle}</Text>
+            <Text style={[styles.typeBadgeSubtitle, { color: colors.textSecondary }]}>Auto-detected format</Text>
           </View>
         </View>
 
         {/* 1. URL SPECIFIC VIEW */}
         {type === 'url' && (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Website Address</Text>
-            <Text style={styles.primaryValueText} selectable>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Website Address</Text>
+            <Text style={[styles.primaryValueText, { color: colors.textPrimary }]} selectable>
               {metadata.url || rawContent}
             </Text>
 
             <TouchableOpacity
-              style={[styles.primaryButton, { marginTop: theme.spacing.md }]}
+              style={[styles.primaryButton, { marginTop: theme.spacing.md, backgroundColor: colors.primary }]}
               onPress={() => openUrl(metadata.url || rawContent)}
             >
               <Text style={styles.primaryButtonText}>Open in Browser</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, { backgroundColor: colors.surfaceHover }]}
               onPress={() => copyToClipboard(metadata.url || rawContent, 'URL copied!')}
             >
-              <Text style={styles.secondaryButtonText}>Copy Link</Text>
+              <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>Copy Link</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* 2. WI-FI SPECIFIC VIEW */}
         {type === 'wifi' && (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Network Name (SSID)</Text>
-            <Text style={styles.primaryValueText} selectable>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Network Name (SSID)</Text>
+            <Text style={[styles.primaryValueText, { color: colors.textPrimary }]} selectable>
               {metadata.ssid || 'Unknown Network'}
             </Text>
 
             {metadata.password ? (
               <View style={{ marginTop: theme.spacing.md }}>
-                <Text style={styles.sectionLabel}>Password</Text>
-                <View style={styles.credentialBox}>
-                  <Text style={styles.credentialText} selectable>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Password</Text>
+                <View style={[styles.credentialBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                  <Text style={[styles.credentialText, { color: colors.textPrimary }]} selectable>
                     {metadata.password}
                   </Text>
                   <TouchableOpacity
-                    style={styles.miniCopyButton}
+                    style={[styles.miniCopyButton, { backgroundColor: colors.surfaceHover }]}
                     onPress={() => copyToClipboard(metadata.password, 'Password copied!')}
                   >
-                    <Text style={styles.miniCopyText}>Copy</Text>
+                    <Text style={[styles.miniCopyText, { color: colors.textPrimary }]}>Copy</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             ) : null}
 
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Security:</Text>
-              <Text style={styles.metaValue}>{metadata.authType || 'WPA'}</Text>
+              <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Security:</Text>
+              <Text style={[styles.metaValue, { color: colors.textPrimary }]}>{metadata.authType || 'WPA'}</Text>
             </View>
 
             <TouchableOpacity
-              style={[styles.primaryButton, { marginTop: theme.spacing.md }]}
+              style={[styles.primaryButton, { marginTop: theme.spacing.md, backgroundColor: colors.primary }]}
               onPress={() =>
                 copyToClipboard(metadata.password || metadata.ssid, 'Wi-Fi credentials copied!')
               }
@@ -196,8 +212,9 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
             </TouchableOpacity>
 
             <View style={styles.infoTipBox}>
+              <AppIcon name="wifi" size={16} color={colors.accent} />
               <Text style={styles.infoTipText}>
-                💡 Open Wi-Fi settings in your device and paste this password to connect.
+                Open Wi-Fi settings in your device and paste this password to connect.
               </Text>
             </View>
           </View>
@@ -205,22 +222,22 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
 
         {/* 3. VCARD SPECIFIC VIEW */}
         {type === 'vcard' && (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Full Name</Text>
-            <Text style={styles.primaryValueText} selectable>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Full Name</Text>
+            <Text style={[styles.primaryValueText, { color: colors.textPrimary }]} selectable>
               {metadata.name || 'Contact'}
             </Text>
 
             {metadata.phone ? (
               <View style={styles.detailRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionLabel}>Phone</Text>
-                  <Text style={styles.detailValue} selectable>
+                  <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Phone</Text>
+                  <Text style={[styles.detailValue, { color: colors.textPrimary }]} selectable>
                     {metadata.phone}
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.inlineActionButton}
+                  style={[styles.inlineActionButton, { backgroundColor: colors.primary }]}
                   onPress={() => openUrl(`tel:${metadata.phone}`)}
                 >
                   <Text style={styles.inlineActionText}>Call</Text>
@@ -231,13 +248,13 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
             {metadata.email ? (
               <View style={styles.detailRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionLabel}>Email</Text>
-                  <Text style={styles.detailValue} selectable>
+                  <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Email</Text>
+                  <Text style={[styles.detailValue, { color: colors.textPrimary }]} selectable>
                     {metadata.email}
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.inlineActionButton}
+                  style={[styles.inlineActionButton, { backgroundColor: colors.primary }]}
                   onPress={() => openUrl(`mailto:${metadata.email}`)}
                 >
                   <Text style={styles.inlineActionText}>Email</Text>
@@ -247,39 +264,39 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
 
             {metadata.organization ? (
               <View style={{ marginTop: theme.spacing.sm }}>
-                <Text style={styles.sectionLabel}>Organization</Text>
-                <Text style={styles.detailValue}>{metadata.organization}</Text>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Organization</Text>
+                <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{metadata.organization}</Text>
               </View>
             ) : null}
 
             <TouchableOpacity
-              style={[styles.secondaryButton, { marginTop: theme.spacing.md }]}
+              style={[styles.secondaryButton, { marginTop: theme.spacing.md, backgroundColor: colors.surfaceHover }]}
               onPress={() => copyToClipboard(rawContent, 'Contact info copied!')}
             >
-              <Text style={styles.secondaryButtonText}>Copy All Details</Text>
+              <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>Copy All Details</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* 4. UPI SPECIFIC VIEW */}
         {type === 'upi' && (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Payee UPI ID</Text>
-            <Text style={styles.primaryValueText} selectable>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Payee UPI ID</Text>
+            <Text style={[styles.primaryValueText, { color: colors.textPrimary }]} selectable>
               {metadata.pa || 'N/A'}
             </Text>
 
             {metadata.pn ? (
               <View style={{ marginTop: theme.spacing.sm }}>
-                <Text style={styles.sectionLabel}>Payee Name</Text>
-                <Text style={styles.detailValue}>{metadata.pn}</Text>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Payee Name</Text>
+                <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{metadata.pn}</Text>
               </View>
             ) : null}
 
             {metadata.am ? (
               <View style={{ marginTop: theme.spacing.sm }}>
-                <Text style={styles.sectionLabel}>Amount</Text>
-                <Text style={[styles.primaryValueText, { color: theme.colors.accent }]}>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Amount</Text>
+                <Text style={[styles.primaryValueText, { color: colors.accent }]}>
                   {metadata.cu || 'INR'} {metadata.am}
                 </Text>
               </View>
@@ -287,8 +304,8 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
 
             {metadata.tn ? (
               <View style={{ marginTop: theme.spacing.sm }}>
-                <Text style={styles.sectionLabel}>Note</Text>
-                <Text style={styles.detailValue}>{metadata.tn}</Text>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Note</Text>
+                <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{metadata.tn}</Text>
               </View>
             ) : null}
 
@@ -300,38 +317,38 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, { backgroundColor: colors.surfaceHover }]}
               onPress={() => copyToClipboard(metadata.pa, 'UPI ID copied!')}
             >
-              <Text style={styles.secondaryButtonText}>Copy UPI ID</Text>
+              <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>Copy UPI ID</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* 5. PLAIN TEXT / BARCODE VIEW */}
         {type === 'plainText' && (
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Raw Content</Text>
-            <View style={styles.rawContentBox}>
-              <Text style={styles.rawContentText} selectable>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Raw Content</Text>
+            <View style={[styles.rawContentBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <Text style={[styles.rawContentText, { color: colors.textPrimary }]} selectable>
                 {rawContent}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={[styles.primaryButton, { marginTop: theme.spacing.md }]}
+              style={[styles.primaryButton, { marginTop: theme.spacing.md, backgroundColor: colors.primary }]}
               onPress={() => copyToClipboard(rawContent, 'Text copied!')}
             >
               <Text style={styles.primaryButtonText}>Copy Text</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, { backgroundColor: colors.surfaceHover }]}
               onPress={() =>
                 openUrl(`https://www.google.com/search?q=${encodeURIComponent(rawContent)}`)
               }
             >
-              <Text style={styles.secondaryButtonText}>Search on Google</Text>
+              <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>Search on Google</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -339,10 +356,10 @@ export const ScanResultScreen: React.FC<Props> = ({ route, navigation }) => {
         {/* Universal Actions */}
         <View style={styles.universalActions}>
           <TouchableOpacity
-            style={styles.scanAgainButton}
+            style={[styles.scanAgainButton, { borderColor: colors.border }]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.scanAgainText}>Scan Another Code</Text>
+            <Text style={[styles.scanAgainText, { color: colors.textSecondary }]}>Scan Another Code</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -403,6 +420,9 @@ const styles = StyleSheet.create({
     top: 104,
     alignSelf: 'center',
     zIndex: 99,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#10B981',
     paddingVertical: 8,
     paddingHorizontal: 18,
@@ -511,11 +531,15 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.25)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   infoTipText: {
     color: '#C7D2FE',
     fontSize: 13,
     lineHeight: 18,
+    flex: 1,
   },
   detailRow: {
     flexDirection: 'row',

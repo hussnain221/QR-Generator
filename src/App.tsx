@@ -8,16 +8,21 @@ import { RootNavigator } from './navigation/RootNavigator';
 import { AdManager } from './core/ads/adManager';
 import { HistoryRepository } from './core/storage/historyRepository';
 import { ErrorBoundary } from './shared/components/ErrorBoundary';
+import { AppDialog } from './shared/components/AppDialog';
+import { useTheme } from './theme/theme';
 
 // Keep the splash screen visible while loading resources
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
+  const { isDark, colors } = useTheme();
+
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Initialize SQLite schema and AdMob in parallel
+        // Initialize SQLite schema, AdMob, and theme in parallel
         await Promise.allSettled([
+          useTheme.getState().initTheme(),
           HistoryRepository.getInstance().init(),
           AdManager.getInstance().initialize(),
         ]);
@@ -34,10 +39,11 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={styles.root}>
+      <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.background }]}>
         <SafeAreaProvider>
           <RootNavigator />
-          <StatusBar style="light" />
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          <AppDialog />
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

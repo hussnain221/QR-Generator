@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { HistoryItem } from '../../core/storage/historyRepository';
 import { ResultTypeIcon } from './ResultTypeIcon';
 import { ResultParser } from '../../core/scan/resultParser';
-import { theme } from '../../theme/theme';
+import { theme, useTheme } from '../../theme/theme';
+import { AppIcon } from './AppIcon';
 
 interface Props {
   item: HistoryItem;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export const HistoryTile: React.FC<Props> = ({ item, onPress, onDelete }) => {
+  const { colors, isDark } = useTheme();
   const parsed = ResultParser.parse(item.rawContent);
 
   const formatTimestamp = (ts: number): string => {
@@ -51,7 +53,7 @@ export const HistoryTile: React.FC<Props> = ({ item, onPress, onDelete }) => {
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: colors.surface }]}
       activeOpacity={0.7}
       onPress={() => onPress(item)}
     >
@@ -59,7 +61,7 @@ export const HistoryTile: React.FC<Props> = ({ item, onPress, onDelete }) => {
 
       <View style={styles.textContainer}>
         <View style={styles.topRow}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
             {getDisplayHeading()}
           </Text>
         </View>
@@ -71,11 +73,11 @@ export const HistoryTile: React.FC<Props> = ({ item, onPress, onDelete }) => {
               item.isScanOrGenerate === 'scan' ? styles.scanBadge : styles.generateBadge,
             ]}
           >
-            <Text style={styles.badgeText}>
+            <Text style={[styles.badgeText, { color: isDark ? '#E2E8F0' : '#1E293B' }]}>
               {item.isScanOrGenerate === 'scan' ? 'Scanned' : 'Created'}
             </Text>
           </View>
-          <Text style={styles.timeText}>{formatTimestamp(item.timestamp)}</Text>
+          <Text style={[styles.timeText, { color: colors.textSecondary }]}>{formatTimestamp(item.timestamp)}</Text>
         </View>
       </View>
 
@@ -85,12 +87,13 @@ export const HistoryTile: React.FC<Props> = ({ item, onPress, onDelete }) => {
           onPress={() => onDelete(item.id!)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.deleteIconText}>✕</Text>
+          <AppIcon name="close" size={14} color={colors.danger} strokeWidth={2.5} />
         </TouchableOpacity>
       )}
     </TouchableOpacity>
   );
 };
+
 
 const styles = StyleSheet.create({
   card: {
