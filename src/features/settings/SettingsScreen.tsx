@@ -248,7 +248,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* APP INFO FOOTER */}
         <View style={styles.aboutFooter}>
-          <Text style={[styles.aboutAppName, { color: colors.textPrimary }]}>QR & Barcode Scanner</Text>
+          <Text style={[styles.aboutAppName, { color: colors.textPrimary }]}>QR Scanner & Generator</Text>
           <Text style={[styles.aboutVersion, { color: colors.textSecondary }]}>Version 1.0.0 (Build 1)</Text>
           <Text style={[styles.aboutTagline, { color: colors.textSecondary }]}>
             100% on-device processing. No servers, no tracking, complete privacy.

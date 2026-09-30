@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "QR & Barcode Scanner",
+    "name": "QR Scanner & Generator",
     "slug": "qr-scanner-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -44,13 +44,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow QR & Barcode Scanner to access your camera to scan codes."
+          "cameraPermission": "Allow QR Scanner & Generator to access your camera to scan codes."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow QR & Barcode Scanner to access and save photos."
+          "photosPermission": "Allow QR Scanner & Generator to access and save photos."
         }
       ],
       [
