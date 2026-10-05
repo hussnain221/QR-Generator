@@ -18,6 +18,7 @@ import {
   CameraView,
   useCameraPermissions,
   BarcodeScanningResult,
+  scanFromURLAsync,
 } from 'expo-camera';
 import { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library/legacy';
@@ -237,11 +238,48 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleSelectAsset = (asset: MediaLibrary.Asset) => {
+  const handleSelectAsset = async (asset: MediaLibrary.Asset) => {
     setGalleryModalVisible(false);
     setIsScanning(false);
     scannerServiceRef.current.setScanningActive(false);
     setIsAnalyzingImage(true);
+
+    try {
+      // 1. Blazing fast native Google MLKit scan (~50ms)
+      const nativeResults = await scanFromURLAsync(asset.uri, [
+        'qr',
+        'ean13',
+        'ean8',
+        'code128',
+        'code39',
+        'upc_a',
+        'upc_e',
+        'pdf417',
+        'aztec',
+        'datamatrix',
+      ]);
+
+      if (nativeResults && nativeResults.length > 0 && nativeResults[0].data) {
+        const qrData = nativeResults[0].data;
+        const parsed = ResultParser.parse(qrData);
+        try {
+          const shouldVibrate = await PrefsRepository.getInstance().getVibrateOnScan();
+          if (shouldVibrate) {
+            Vibration.vibrate(60);
+          }
+        } catch {
+          // Graceful fallback
+        }
+        setIsAnalyzingImage(false);
+        setAnalyzingAssetUri(null);
+        navigation.navigate('ScanResult', { parsedResult: parsed });
+        return;
+      }
+    } catch (nativeErr) {
+      console.log('Native scanFromURLAsync fallback to JS decoder:', nativeErr);
+    }
+
+    // 2. Pure JS fallback decoder if native MLKit didn't detect code
     setAnalyzingAssetUri(asset.uri);
 
     if (analysisTimeoutRef.current) {
@@ -254,12 +292,12 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
       scannerServiceRef.current.setScanningActive(true);
       showDialog({
         title: 'Scan Timeout',
-        message: 'Image processing timed out. Please choose a clearer photo or try another image.',
+        message: 'Could not detect a clear QR code in this photo. Please try another image.',
         type: 'warning',
         icon: 'warning',
         confirmText: 'OK',
       });
-    }, 7000);
+    }, 5000);
   };
 
   const onCaptureImageLoaded = async () => {
@@ -1001,14 +1039,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: 1024,
-    height: 1024,
+    width: 512,
+    height: 512,
     backgroundColor: '#FFFFFF',
     zIndex: 0,
     opacity: 1,
   },
   hiddenCaptureImage: {
-    width: 1024,
-    height: 1024,
+    width: 512,
+    height: 512,
   },
 });
