@@ -18,7 +18,6 @@ import {
   CameraView,
   useCameraPermissions,
   BarcodeScanningResult,
-  scanFromURLAsync,
 } from 'expo-camera';
 import { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library/legacy';
@@ -238,48 +237,11 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleSelectAsset = async (asset: MediaLibrary.Asset) => {
+  const handleSelectAsset = (asset: MediaLibrary.Asset) => {
     setGalleryModalVisible(false);
     setIsScanning(false);
     scannerServiceRef.current.setScanningActive(false);
     setIsAnalyzingImage(true);
-
-    try {
-      // 1. Blazing fast native Google MLKit scan (~50ms)
-      const nativeResults = await scanFromURLAsync(asset.uri, [
-        'qr',
-        'ean13',
-        'ean8',
-        'code128',
-        'code39',
-        'upc_a',
-        'upc_e',
-        'pdf417',
-        'aztec',
-        'datamatrix',
-      ]);
-
-      if (nativeResults && nativeResults.length > 0 && nativeResults[0].data) {
-        const qrData = nativeResults[0].data;
-        const parsed = ResultParser.parse(qrData);
-        try {
-          const shouldVibrate = await PrefsRepository.getInstance().getVibrateOnScan();
-          if (shouldVibrate) {
-            Vibration.vibrate(60);
-          }
-        } catch {
-          // Graceful fallback
-        }
-        setIsAnalyzingImage(false);
-        setAnalyzingAssetUri(null);
-        navigation.navigate('ScanResult', { parsedResult: parsed });
-        return;
-      }
-    } catch (nativeErr) {
-      console.log('Native scanFromURLAsync fallback to JS decoder:', nativeErr);
-    }
-
-    // 2. Pure JS fallback decoder if native MLKit didn't detect code
     setAnalyzingAssetUri(asset.uri);
 
     if (analysisTimeoutRef.current) {
@@ -297,21 +259,24 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
         icon: 'warning',
         confirmText: 'OK',
       });
-    }, 5000);
+    }, 4000);
   };
 
   const onCaptureImageLoaded = async () => {
     try {
-      // Short delay to guarantee native paint buffer is updated
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      // Short 30ms buffer for native view texture to bind
+      await new Promise((resolve) => setTimeout(resolve, 30));
 
       if (!hiddenCaptureRef.current) {
         throw new Error('Capture view ref missing');
       }
 
+      // Capture lightweight 360x360 frame (~40KB base64, decodes in ~40ms)
       const base64 = await captureRef(hiddenCaptureRef.current, {
         format: 'jpg',
-        quality: 0.85,
+        quality: 0.65,
+        width: 360,
+        height: 360,
         result: 'base64',
       });
 
@@ -1039,14 +1004,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: 512,
-    height: 512,
+    width: 360,
+    height: 360,
     backgroundColor: '#FFFFFF',
     zIndex: 0,
     opacity: 1,
   },
   hiddenCaptureImage: {
-    width: 512,
-    height: 512,
+    width: 360,
+    height: 360,
   },
 });
