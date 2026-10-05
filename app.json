@@ -39,7 +39,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
+          "androidAppId": "ca-app-pub-5295952118007438~4635383536"
         }
       ],
       [
@@ -75,6 +75,6 @@
     "owner": "stormlogix"
   },
   "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-3940256099942544~3347511713"
+    "android_app_id": "ca-app-pub-5295952118007438~4635383536"
   }
 }
