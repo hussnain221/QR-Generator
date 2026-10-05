@@ -259,24 +259,24 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
         icon: 'warning',
         confirmText: 'OK',
       });
-    }, 4000);
+    }, 7000);
   };
 
   const onCaptureImageLoaded = async () => {
     try {
-      // Short 30ms buffer for native view texture to bind
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      // 80ms buffer for native view texture to fully bind
+      await new Promise((resolve) => setTimeout(resolve, 80));
 
       if (!hiddenCaptureRef.current) {
         throw new Error('Capture view ref missing');
       }
 
-      // Capture lightweight 360x360 frame (~40KB base64, decodes in ~40ms)
+      // Capture high-fidelity 768x768 frame for crystal clear module detection
       const base64 = await captureRef(hiddenCaptureRef.current, {
         format: 'jpg',
-        quality: 0.65,
-        width: 360,
-        height: 360,
+        quality: 0.85,
+        width: 768,
+        height: 768,
         result: 'base64',
       });
 
@@ -1004,14 +1004,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: 360,
-    height: 360,
+    width: 768,
+    height: 768,
     backgroundColor: '#FFFFFF',
     zIndex: 0,
     opacity: 1,
   },
   hiddenCaptureImage: {
-    width: 360,
-    height: 360,
+    width: 768,
+    height: 768,
   },
 });

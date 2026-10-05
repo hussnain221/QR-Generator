@@ -58,15 +58,9 @@ export function decodeQRFromBase64(base64: string): string | null {
       decoded.data.byteLength
     );
 
-    // Fast path: try standard orientation first (99% of QR codes)
-    let result = jsQR(clamped, decoded.width, decoded.height, {
-      inversionAttempts: 'dontInvert',
+    const result = jsQR(clamped, decoded.width, decoded.height, {
+      inversionAttempts: 'attemptBoth',
     });
-    if (!result) {
-      result = jsQR(clamped, decoded.width, decoded.height, {
-        inversionAttempts: 'onlyInvert',
-      });
-    }
 
     return result?.data || null;
   } catch (error) {

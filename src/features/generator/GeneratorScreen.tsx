@@ -599,7 +599,7 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
                 color={selectedColor}
                 backgroundColor="#FFFFFF"
               />
-              <Text style={styles.qrWatermark}>QR & Barcode Scanner</Text>
+              <Text style={styles.qrWatermark}>QR Scanner & Generator</Text>
             </View>
 
             {/* Actions for generated QR */}
