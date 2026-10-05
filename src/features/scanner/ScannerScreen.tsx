@@ -20,7 +20,6 @@ import {
   BarcodeScanningResult,
 } from 'expo-camera';
 import { captureRef } from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library/legacy';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';

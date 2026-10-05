@@ -45,7 +45,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow QR Scanner & Generator to access your camera to scan codes."
+          "cameraPermission": "Allow QR Scanner & Generator to access your camera to scan codes.",
+          "microphonePermission": false
         }
       ],
       [
