@@ -20,7 +20,7 @@ import {
   BarcodeScanningResult,
 } from 'expo-camera';
 import { captureRef } from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -51,16 +51,6 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
   const [analyzingAssetUri, setAnalyzingAssetUri] = useState<string | null>(null);
   const hiddenCaptureRef = useRef<View>(null);
   const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [galleryModalVisible, setGalleryModalVisible] = useState(false);
-  const [galleryAssets, setGalleryAssets] = useState<MediaLibrary.Asset[]>([]);
-  const [isLoadingGallery, setIsLoadingGallery] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [endCursor, setEndCursor] = useState<string | undefined>(undefined);
-  const [isLimitedAccess, setIsLimitedAccess] = useState(false);
-  const [albums, setAlbums] = useState<MediaLibrary.Album[]>([]);
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -132,134 +122,49 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
-  const loadGalleryPhotos = async (albumId?: string | null, isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoadingGallery(true);
-      }
-
-      const res = await MediaLibrary.getAssetsAsync({
-        first: 80,
-        album: albumId || undefined,
-        mediaType: 'photo',
-        sortBy: ['creationTime'],
-      });
-
-      setGalleryAssets(res.assets || []);
-      setEndCursor(res.endCursor);
-      setHasNextPage(res.hasNextPage);
-    } catch (err: any) {
-      console.warn('Failed to load assets:', err);
-    } finally {
-      setIsLoadingGallery(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  const loadMorePhotos = async () => {
-    if (!hasNextPage || isLoadingMore || !endCursor) return;
-    try {
-      setIsLoadingMore(true);
-      const res = await MediaLibrary.getAssetsAsync({
-        first: 80,
-        after: endCursor,
-        album: selectedAlbumId || undefined,
-        mediaType: 'photo',
-        sortBy: ['creationTime'],
-      });
-
-      setGalleryAssets((prev) => [...prev, ...(res.assets || [])]);
-      setEndCursor(res.endCursor);
-      setHasNextPage(res.hasNextPage);
-    } catch (err: any) {
-      console.warn('Failed to load more photos:', err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
-  const handleSelectAlbum = (albumId: string | null) => {
-    setSelectedAlbumId(albumId);
-    loadGalleryPhotos(albumId);
-  };
-
   const handlePickFromGallery = async () => {
     try {
-      let perm = await MediaLibrary.getPermissionsAsync();
-      if (!perm.granted) {
-        perm = await MediaLibrary.requestPermissionsAsync();
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
       }
-      if (!perm.granted) {
+
+      const selectedUri = result.assets[0].uri;
+      setIsScanning(false);
+      scannerServiceRef.current.setScanningActive(false);
+      setIsAnalyzingImage(true);
+      setAnalyzingAssetUri(selectedUri);
+
+      if (analysisTimeoutRef.current) {
+        clearTimeout(analysisTimeoutRef.current);
+      }
+      analysisTimeoutRef.current = setTimeout(() => {
+        setIsAnalyzingImage(false);
+        setAnalyzingAssetUri(null);
+        setIsScanning(true);
+        scannerServiceRef.current.setScanningActive(true);
         showDialog({
-          title: 'Permission Required',
-          message: 'Photos access is required to select and scan QR codes from your gallery.',
+          title: 'No QR Code Found',
+          message: 'Could not detect a clear QR or barcode in this image. Please try another image.',
           type: 'warning',
           icon: 'warning',
           confirmText: 'OK',
         });
-        return;
-      }
-
-      const isLimited = perm.accessPrivileges === 'limited';
-      setIsLimitedAccess(isLimited);
-      setGalleryModalVisible(true);
-      setSelectedAlbumId(null);
-
-      // Load initial photos & albums in parallel
-      await Promise.allSettled([
-        loadGalleryPhotos(null),
-        MediaLibrary.getAlbumsAsync().then((allAlbums) => {
-          const validAlbums = allAlbums.filter((a) => a.assetCount > 0);
-          setAlbums(validAlbums);
-        }),
-      ]);
+      }, 7000);
     } catch (err: any) {
       showDialog({
         title: 'Gallery Error',
-        message: err?.message || 'Could not load photos from gallery.',
+        message: err?.message || 'Could not pick photo from gallery.',
         type: 'danger',
         icon: 'warning',
         confirmText: 'OK',
       });
     }
-  };
-
-  const handleManageLimitedAccess = async () => {
-    try {
-      await MediaLibrary.presentPermissionsPickerAsync(['photo']);
-      const perm = await MediaLibrary.getPermissionsAsync();
-      setIsLimitedAccess(perm.accessPrivileges === 'limited');
-      loadGalleryPhotos(selectedAlbumId, true);
-    } catch {
-      Linking.openSettings();
-    }
-  };
-
-  const handleSelectAsset = (asset: MediaLibrary.Asset) => {
-    setGalleryModalVisible(false);
-    setIsScanning(false);
-    scannerServiceRef.current.setScanningActive(false);
-    setIsAnalyzingImage(true);
-    setAnalyzingAssetUri(asset.uri);
-
-    if (analysisTimeoutRef.current) {
-      clearTimeout(analysisTimeoutRef.current);
-    }
-    analysisTimeoutRef.current = setTimeout(() => {
-      setIsAnalyzingImage(false);
-      setAnalyzingAssetUri(null);
-      setIsScanning(true);
-      scannerServiceRef.current.setScanningActive(true);
-      showDialog({
-        title: 'Scan Timeout',
-        message: 'Could not detect a clear QR code in this photo. Please try another image.',
-        type: 'warning',
-        icon: 'warning',
-        confirmText: 'OK',
-      });
-    }, 7000);
   };
 
   const onCaptureImageLoaded = async () => {
@@ -507,169 +412,7 @@ export const ScannerScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Photo Gallery Picker Modal */}
-      <Modal
-        visible={galleryModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setGalleryModalVisible(false)}
-      >
-        <View style={[styles.galleryModalContainer, { backgroundColor: colors.background }]}>
-          {/* Modal Header */}
-          <View style={[styles.galleryModalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.galleryModalTitle, { color: colors.textPrimary }]}>Choose Photo to Scan</Text>
-            <TouchableOpacity
-              style={[styles.galleryCloseButton, { backgroundColor: colors.surface }]}
-              onPress={() => setGalleryModalVisible(false)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <AppIcon name="close" size={18} color={colors.textPrimary} strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
 
-          {/* Android 14+ Limited Access Banner */}
-          {isLimitedAccess && (
-            <View
-              style={[
-                styles.limitedBanner,
-                {
-                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7',
-                  borderColor: colors.warning,
-                },
-              ]}
-            >
-              <View style={styles.limitedBannerTextRow}>
-                <AppIcon name="warning" size={16} color={colors.warning} />
-                <Text
-                  style={[
-                    styles.limitedBannerText,
-                    { color: isDark ? '#FDE68A' : '#92400E' },
-                  ]}
-                >
-                  Showing selected photos only (Android limited access).
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.manageAccessButton, { backgroundColor: colors.warning }]}
-                onPress={handleManageLimitedAccess}
-              >
-                <Text style={styles.manageAccessButtonText}>Allow More Photos</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Album Filter Chips */}
-          {albums.length > 0 && (
-            <View style={styles.albumsContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.albumsScroll}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.albumChip,
-                    {
-                      backgroundColor:
-                        selectedAlbumId === null ? colors.primary : colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => handleSelectAlbum(null)}
-                >
-                  <Text
-                    style={[
-                      styles.albumChipText,
-                      { color: selectedAlbumId === null ? '#FFF' : colors.textSecondary },
-                    ]}
-                  >
-                    All Photos
-                  </Text>
-                </TouchableOpacity>
-
-                {albums.map((alb) => {
-                  const isSel = selectedAlbumId === alb.id;
-                  return (
-                    <TouchableOpacity
-                      key={alb.id}
-                      style={[
-                        styles.albumChip,
-                        {
-                          backgroundColor: isSel ? colors.primary : colors.surface,
-                          borderColor: colors.border,
-                        },
-                      ]}
-                      onPress={() => handleSelectAlbum(alb.id)}
-                    >
-                      <Text
-                        style={[
-                          styles.albumChipText,
-                          { color: isSel ? '#FFF' : colors.textSecondary },
-                        ]}
-                      >
-                        {alb.title} ({alb.assetCount})
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Modal Content */}
-          {isLoadingGallery ? (
-            <View style={styles.galleryLoadingBox}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.galleryLoadingText, { color: colors.textSecondary }]}>Loading photos...</Text>
-            </View>
-          ) : galleryAssets.length === 0 ? (
-            <View style={styles.galleryEmptyBox}>
-              <AppIcon name="image" size={48} color={colors.textSecondary} />
-              <Text style={[styles.galleryEmptyTitle, { color: colors.textPrimary }]}>No Photos Found</Text>
-              <Text style={[styles.galleryEmptySubtitle, { color: colors.textSecondary }]}>
-                {isLimitedAccess
-                  ? 'Tap "Allow More Photos" above to select photos from your device.'
-                  : 'No photos were found in your device gallery.'}
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={galleryAssets}
-              keyExtractor={(item) => item.id}
-              numColumns={NUM_COLUMNS}
-              contentContainerStyle={styles.galleryGrid}
-              showsVerticalScrollIndicator={false}
-              initialNumToRender={24}
-              maxToRenderPerBatch={24}
-              windowSize={7}
-              onEndReached={loadMorePhotos}
-              onEndReachedThreshold={0.5}
-              refreshing={isRefreshing}
-              onRefresh={() => loadGalleryPhotos(selectedAlbumId, true)}
-              ListFooterComponent={
-                isLoadingMore ? (
-                  <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </View>
-                ) : null
-              }
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.galleryItem}
-                  activeOpacity={0.75}
-                  onPress={() => handleSelectAsset(item)}
-                >
-                  <Image
-                    source={{ uri: item.uri }}
-                    style={styles.galleryThumb}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
 
       {/* Offscreen image capture container for pure-JS QR decoding */}
       {analyzingAssetUri && (
