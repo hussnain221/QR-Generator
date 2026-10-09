@@ -25,6 +25,13 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.RECORD_AUDIO"
+      ],
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.INTERNET",
@@ -46,14 +53,6 @@
         {
           "cameraPermission": "Allow QR Scanner & Generator to access your camera to scan codes.",
           "microphonePermission": false
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": false,
-          "savePhotosPermission": "Allow QR Scanner & Generator to save QR code images to your gallery.",
-          "isAccessMediaLocationEnabled": false
         }
       ],
       [

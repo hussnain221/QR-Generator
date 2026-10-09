@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -116,48 +115,27 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
     if (!qrRef.current) return;
     setIsSaving(true);
     try {
-      let perm = await MediaLibrary.getPermissionsAsync(true);
-      if (perm.status !== 'granted') {
-        perm = await MediaLibrary.requestPermissionsAsync(true);
-      }
-      if (perm.status !== 'granted') {
+      const uri = await captureRef(qrRef, {
+        format: 'png',
+        quality: 1.0,
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Save QR Code Image',
+        });
+        showToast('QR Code image exported!');
+      } else {
         showDialog({
-          title: 'Permission Required',
-          message: 'Storage permission is required to save the QR code to your gallery.',
+          title: 'Export Failed',
+          message: 'Sharing is not available on this device.',
           type: 'warning',
           icon: 'warning',
           confirmText: 'OK',
         });
-        setIsSaving(false);
-        return;
       }
-
-      const uri = await captureRef(qrRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'tmpfile',
-      });
-
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      try {
-        const album = await MediaLibrary.getAlbumAsync('QR Scanner');
-        if (album) {
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-        } else {
-          await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
-        }
-      } catch (albumErr) {
-        console.log('Album grouping optional:', albumErr);
-      }
-
-      showToast('Saved to photos gallery!');
-      showDialog({
-        title: 'Saved to Gallery',
-        message: 'QR Code has been saved to your photo gallery.',
-        type: 'success',
-        icon: 'check',
-        confirmText: 'Done',
-      });
     } catch (error: any) {
       console.error('Save to gallery error:', error);
       showDialog({
