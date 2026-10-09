@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.stormlogix.qrscanner",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/android-icon-foreground.png",
