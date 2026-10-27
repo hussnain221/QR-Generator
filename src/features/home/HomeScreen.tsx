@@ -7,6 +7,7 @@ import { HistoryRepository, HistoryItem } from '../../core/storage/historyReposi
 import { HistoryTile } from '../../shared/components/HistoryTile';
 import { ResultParser } from '../../core/scan/resultParser';
 import { AppIcon } from '../../shared/components/AppIcon';
+import { AppBannerAd } from '../../shared/components/AppBannerAd';
 import { theme, useTheme } from '../../theme/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -117,6 +118,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
+
+      {/* Bottom Banner Ad */}
+      <View style={styles.bannerWrapper}>
+        <AppBannerAd />
+      </View>
     </View>
   );
 };
@@ -240,5 +246,12 @@ const styles = StyleSheet.create({
   emptyHistoryText: {
     color: theme.colors.textSecondary,
     fontSize: 14,
+  },
+  bannerWrapper: {
+    paddingVertical: 8,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
 });

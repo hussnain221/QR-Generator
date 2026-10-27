@@ -40,6 +40,7 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
   const [isStyleUnlocked, setIsStyleUnlocked] = useState(false);
+  const [isAdLoading, setIsAdLoading] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#0F172A');
 
   const {
@@ -98,16 +99,40 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleUnlockStyling = async () => {
-    if (isStyleUnlocked) return;
-    const shown = await AdManager.getInstance().showRewarded(() => {
-      setIsStyleUnlocked(true);
-      showToast('Custom colors unlocked for this session!');
-    });
-
-    if (!shown) {
-      // In dev or if ad not filled yet, grant reward
-      setIsStyleUnlocked(true);
-      showToast('Custom colors unlocked!');
+    if (isStyleUnlocked || isAdLoading) return;
+    setIsAdLoading(true);
+    try {
+      const result = await AdManager.getInstance().showRewardedAsync();
+      if (result.earned) {
+        setIsStyleUnlocked(true);
+        showToast('Custom colors unlocked for this session!');
+      } else if (result.reason === 'dismissed_early') {
+        showDialog({
+          title: 'Reward Incomplete',
+          message: 'You need to watch the full video ad until the end to unlock custom QR colors.',
+          type: 'warning',
+          icon: 'warning',
+          confirmText: 'Got It',
+        });
+      } else {
+        showDialog({
+          title: 'Ad Unavailable',
+          message: 'Ad is not available right now. Please check your internet connection and try again in a moment.',
+          type: 'info',
+          icon: 'warning',
+          confirmText: 'OK',
+        });
+      }
+    } catch {
+      showDialog({
+        title: 'Ad Error',
+        message: 'Could not load rewarded ad. Please try again later.',
+        type: 'danger',
+        icon: 'warning',
+        confirmText: 'OK',
+      });
+    } finally {
+      setIsAdLoading(false);
     }
   };
 
@@ -528,11 +553,18 @@ export const GeneratorScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={[styles.stylingTitle, { color: colors.textPrimary }]}>QR Styling</Text>
                 {!isStyleUnlocked ? (
                   <TouchableOpacity
-                    style={styles.unlockBadge}
+                    style={[styles.unlockBadge, isAdLoading && { opacity: 0.7 }]}
                     onPress={handleUnlockStyling}
+                    disabled={isAdLoading}
                   >
-                    <AppIcon name="palette" size={13} color="#000" />
-                    <Text style={styles.unlockBadgeText}>Unlock Colors (Ad)</Text>
+                    {isAdLoading ? (
+                      <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                      <>
+                        <AppIcon name="palette" size={13} color="#000" />
+                        <Text style={styles.unlockBadgeText}>Unlock Colors (Ad)</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.unlockedRow}>

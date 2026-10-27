@@ -119,7 +119,7 @@ export class AdManager {
         this.isRewardedLoading = false;
       });
 
-      ad.addAdEventListener(AdEventType.ERROR, (error) => {
+      ad.addAdEventListener(AdEventType.ERROR, () => {
         this.isRewardedLoaded = false;
         this.isRewardedLoading = false;
         this.rewardedAd = null;
@@ -141,25 +141,80 @@ export class AdManager {
     return this.isRewardedLoaded && this.rewardedAd !== null;
   }
 
-  public async showRewarded(onReward: () => void): Promise<boolean> {
-    if (!this.isRewardedReady() || !this.rewardedAd) {
-      this.preloadRewarded();
-      return false;
+  public async waitForRewardedReady(timeoutMs: number = 4000): Promise<boolean> {
+    if (this.isRewardedReady()) return true;
+    this.preloadRewarded();
+
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (this.isRewardedReady()) return true;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return this.isRewardedReady();
+  }
+
+  public async showRewardedAsync(): Promise<{
+    earned: boolean;
+    reason?: 'not_ready' | 'dismissed_early' | 'error';
+  }> {
+    const isReady = await this.waitForRewardedReady(4000);
+    if (!isReady || !this.rewardedAd) {
+      return { earned: false, reason: 'not_ready' };
     }
 
-    try {
-      const unsubscribe = this.rewardedAd.addAdEventListener(
+    const currentAd = this.rewardedAd;
+    return new Promise((resolve) => {
+      let didEarn = false;
+      let hasResolved = false;
+
+      const finish = (earned: boolean, reason?: 'not_ready' | 'dismissed_early' | 'error') => {
+        if (hasResolved) return;
+        hasResolved = true;
+        resolve({ earned, reason });
+      };
+
+      const unsubReward = currentAd.addAdEventListener(
         RewardedAdEventType.EARNED_REWARD,
         () => {
-          onReward();
-          unsubscribe();
+          didEarn = true;
         }
       );
 
-      await this.rewardedAd.show();
+      const unsubClose = currentAd.addAdEventListener(
+        AdEventType.CLOSED,
+        () => {
+          unsubReward();
+          unsubClose();
+          unsubError();
+          finish(didEarn, didEarn ? undefined : 'dismissed_early');
+        }
+      );
+
+      const unsubError = currentAd.addAdEventListener(
+        AdEventType.ERROR,
+        () => {
+          unsubReward();
+          unsubClose();
+          unsubError();
+          finish(false, 'error');
+        }
+      );
+
+      currentAd.show().catch(() => {
+        unsubReward();
+        unsubClose();
+        unsubError();
+        finish(false, 'error');
+      });
+    });
+  }
+
+  public async showRewarded(onReward: () => void): Promise<boolean> {
+    const res = await this.showRewardedAsync();
+    if (res.earned) {
+      onReward();
       return true;
-    } catch {
-      return false;
     }
+    return false;
   }
 }
