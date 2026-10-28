@@ -3,7 +3,7 @@
     "name": "QR Scanner & Generator",
     "slug": "qr-scanner-app",
     "scheme": "qrscanner",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.stormlogix.qrscanner",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -42,6 +42,7 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
+      "./plugins/withAppOptimization",
       [
         "react-native-google-mobile-ads",
         {
